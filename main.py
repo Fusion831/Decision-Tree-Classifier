@@ -36,6 +36,8 @@ class DecisionTreeClassifier():
                         best_split["info_gain"] = curr_info_gain
                         max_info_gain = curr_info_gain
         return best_split
+    
+    
     def split(self, dataset, feature_index, threshold):
         dataset_left = np.array([row for row in dataset if row[feature_index] <= threshold])
         dataset_right = np.array([row for row in dataset if row[feature_index] > threshold])
@@ -49,6 +51,8 @@ class DecisionTreeClassifier():
         else:
             gain = self.entropy(parent) - (weight_l * self.entropy(l_child) + weight_r * self.entropy(r_child))
         return gain
+    
+    
     def entropy(self, y):
         class_labels = np.unique(y)
         entropy = 0
@@ -56,6 +60,8 @@ class DecisionTreeClassifier():
             p_cls = len(y[y == cls]) / len(y)
             entropy += -p_cls * np.log2(p_cls)
         return entropy
+    
+    
     def gini_index(self, y):
         class_labels = np.unique(y)
         gini = 0
@@ -63,9 +69,14 @@ class DecisionTreeClassifier():
             p_cls = len(y[y == cls]) / len(y)
             gini += p_cls**2
         return 1 - gini
+    
+    
     def calculate_leaf_value(self, y):
         y = list(y)
         return max(y, key = y.count)
+    
+    
+    
     def build_tree(self, dataset, curr_depth = 0):
         X , y = dataset[:,:-1], dataset[:,-1]
         num_samples, num_features = np.shape(X)
@@ -79,6 +90,22 @@ class DecisionTreeClassifier():
         
         return Node(value = self.calculate_leaf_value(y))
     
+    def fit(self, X, y):
+        dataset = np.concatenate((X, y), axis = 1)
+        self.root = self.build_tree(dataset)
+    
+    def make_prediction(self, x, tree):
+        if tree.value != None:
+            return tree.value
+        feature_val = x[tree.feature_index]
+        if feature_val <= tree.threshold:
+            return self.make_prediction(x, tree.left)
+        else:
+            return self.make_prediction(x, tree.right)
+    def predict(self, X):
+        predictions = [self.make_prediction(x, self.root) for x in X]
+        return predictions
+    
     
 
 
@@ -89,3 +116,17 @@ df = pd.read_csv('iris.csv', skiprows=1, header = None, names = ['sepal_length',
 print(
     df.head(10)) 
 
+
+X = df.iloc[:,:-1].values
+y = df.iloc[:,-1].to_numpy().reshape(-1,1)
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 123)
+
+classifier = DecisionTreeClassifier(min_samples_split=3, max_depth=3)
+classifier.fit(X_train, y_train)
+
+y_pred = classifier.predict(X_test)
+from sklearn.metrics import accuracy_score
+print("Accuracy:", accuracy_score(y_test, y_pred)*100)
+
+                                                    
